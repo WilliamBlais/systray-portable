@@ -44,10 +44,17 @@ jobs:
             cgo: "1"
 
           # Windows amd64 — systray uses pure Win32 Go bindings, no CGO needed
-          - os: windows-latest
+          - os: windows-11-amd64
             goos: windows
             goarch: amd64
             name: tray_windows_amd64.exe
+            cgo: "0"
+
+          # Windows arm64 — native ARM64 runner
+          - os: windows-11-arm
+            goos: windows
+            goarch: arm64
+            name: tray_windows_arm64.exe
             cgo: "0"
 
     steps:
