@@ -1,49 +1,84 @@
 # systray-portable
-A portable version of [go systray](https://github.com/getlantern/systray), using stdin/stdout to communicate with other language
 
+A small Go binary that exposes a native system tray icon to any language via a simple stdin/stdout JSON protocol. No native bindings required — spawn the process, send JSON, react to clicks.
+
+Actively maintained fork of [zaaack/systray-portable](https://github.com/zaaack/systray-portable), with Go modules, multi-arch support (including Linux/macOS arm64), and automated releases via GitHub Actions.
+
+## Download
+
+Pre-built binaries are available on the [Releases](https://github.com/WilliamBlais/systray-portable/releases) page for:
+
+| Platform | amd64 | arm64 |
+|----------|-------|-------|
+| macOS    | ✓     | ✓     |
+| Linux    | ✓     | ✓     |
+| Windows  | ✓     |       |
 
 ## Protocol
 
-Each line is a json string.
+Each line on stdin/stdout is a JSON string.
 
-tray binary =>  
-=> ready  `{"type": "ready"}`  
-<= init menu
+### 1. Ready
+
+On startup the binary emits:
 ```json
-{
-  "icon": "<base64 string of image>",
-  "title": "Title",
-  "tooltip": "Tooltips",
-  "items":[{
-    "title": "aa",
-    "tooltip":"bb",
-    "checked": true,
-    "enabled": true
-  }, {
-    "title": "aa2",
-    "tooltip":"bb",
-    "checked": false,
-    "enabled": true
-  }]}
+{"type": "ready"}
 ```
-=> clicked  
+
+### 2. Init menu (your process → tray)
+
+Send a single JSON line to initialize the tray:
 ```json
 {
-  "type":"clicked",
-  "item":{"title":"aa","tooltip":"bb","enabled":true,"checked":true},
-  "menu":{"icon":"","title":"","tooltip":"","items":null},
-  "seq_id":0
+  "icon": "<base64-encoded image>",
+  "title": "Title",
+  "tooltip": "Tooltip",
+  "items": [
+    { "title": "Item 1", "tooltip": "Hint", "checked": true,  "enabled": true },
+    { "title": "Item 2", "tooltip": "Hint", "checked": false, "enabled": true }
+  ]
 }
 ```
-<= update-item / update-menu / update-item-and-menu
+
+### 3. Click event (tray → your process)
+
+When a menu item is clicked:
 ```json
 {
-  "type": "update-item",
-  "item": {"title":"aa3","tooltip":"bb","enabled":true,"checked":true},
+  "type": "clicked",
+  "item": { "title": "Item 1", "tooltip": "Hint", "enabled": true, "checked": true },
   "seq_id": 0
 }
 ```
 
-## Binary
-main_xxx_release: `go build -ldflags "-s -w" tray.go`  
-main_xxx: `go build tray.go`
+### 4. Update (your process → tray)
+
+Send at any time to update an item, the menu, or both:
+
+**update-item**
+```json
+{ "type": "update-item", "item": { "title": "New label", "tooltip": "Hint", "enabled": true, "checked": false }, "seq_id": 0 }
+```
+
+**update-menu**
+```json
+{ "type": "update-menu", "menu": { "icon": "<base64>", "title": "New title", "tooltip": "Hint" } }
+```
+
+**update-item-and-menu**
+```json
+{ "type": "update-item-and-menu", "item": { ... }, "menu": { ... }, "seq_id": 0 }
+```
+
+## Build
+
+Requires Go and, on Linux, `libayatana-appindicator3-dev`.
+
+```sh
+# Current platform (macOS builds both amd64 + arm64)
+node build.js
+
+# Manually
+go build -o tray_linux_amd64 tray.go
+go build -o tray_linux_amd64_release -ldflags "-s -w" tray.go
+```
