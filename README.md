@@ -12,7 +12,7 @@ Pre-built binaries are available on the [Releases](https://github.com/WilliamBla
 |----------|-------|-------|
 | macOS    | ✓     | ✓     |
 | Linux    | ✓     | ✓     |
-| Windows  | ✓     |       |
+| Windows  | ✓     | ✓     |
 
 ## Protocol
 

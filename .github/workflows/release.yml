@@ -50,6 +50,13 @@ jobs:
             name: tray_windows_amd64.exe
             cgo: "0"
 
+          # Windows arm64 — native ARM64 runner
+          - os: windows-11-arm
+            goos: windows
+            goarch: arm64
+            name: tray_windows_arm64.exe
+            cgo: "0"
+
     steps:
       - uses: actions/checkout@v4
 
