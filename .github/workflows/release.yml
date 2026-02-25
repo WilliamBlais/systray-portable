@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS — system Clang is universal, so one runner handles both arches
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            name: tray_darwin_amd64
+            cgo: "1"
+
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            name: tray_darwin_arm64
+            cgo: "1"
+
+          # Linux amd64 — native build, needs GTK/appindicator headers
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            name: tray_linux_amd64
+            cgo: "1"
+
+          # Linux arm64 — native build on GitHub's ARM64 runner
+          - os: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            name: tray_linux_arm64
+            cgo: "1"
+
+          # Windows amd64 — systray uses pure Win32 Go bindings, no CGO needed
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            name: tray_windows_amd64.exe
+            cgo: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install Linux dependencies
+        if: matrix.goos == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libayatana-appindicator3-dev
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: ${{ matrix.cgo }}
+        run: go build -ldflags "-s -w" -o ${{ matrix.name }} tray.go
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  release:
+    name: Publish Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
